@@ -1,51 +1,32 @@
-= Spring Cloud Zuul RateLimit image:https://travis-ci.org/marcosbarbero/spring-cloud-zuul-ratelimit.svg?branch=master["Build Status", link="https://travis-ci.org/marcosbarbero/spring-cloud-zuul-ratelimit"] image:https://coveralls.io/repos/github/marcosbarbero/spring-cloud-zuul-ratelimit/badge.svg?branch=master["Coverage Status", link="https://coveralls.io/github/marcosbarbero/spring-cloud-zuul-ratelimit?branch=master"] image:https://maven-badges.herokuapp.com/maven-central/com.marcosbarbero.cloud/spring-cloud-zuul-ratelimit/badge.svg["Maven Central", link="https://maven-badges.herokuapp.com/maven-central/com.marcosbarbero.cloud/spring-cloud-zuul-ratelimit"]
-:toc:
+= Spring Cloud Zuul RateLimit
 
-:imagesdir: ./assets/images
+== 整体介绍
+在zuul中，可以启用针对每个服务来限流
+有5种内置的限流方式:
 
-== Overview
-Module to enable rate limit per service in Netflix Zuul.
-
-There are five built-in rate limit approaches:
-
- * Authenticated User
- ** Uses the authenticated username or 'anonymous'
- * Request Origin
- ** Uses the user origin request
+ * 登录用户
+ ** 使用登录名或匿名anonymous
+ * 用户IP地址
+ ** 使用用户的IP请求地址来限流
  * URL
- ** Uses the request path of the downstream service
+ ** 使用用户的请求path来限流
  * URL Pattern
- ** Uses the request Ant path pattern to the downstream service
+ ** 使用用户的请求path的匹配模式来限流
  * ROLE
- ** Uses the authenticated user roles
+ ** 使用登录用户的不同角色来限流
  * Request method
- ** Uses the HTTP request method
+ ** 使用用户请求的方法来限流，如POST|GET|DELETE
  * Global configuration per service:
- ** This one does not validate the request Origin, Authenticated User or URI
- ** To use this approach just don't set param 'type'
+ ** 这种方式不会校验IP地址、登录用户、还有URI等、
+ ** 使用这个方式，不可以在配置中使用type
 
-[NOTE]
+[注意]
 ====
-It is possible to combine Authenticated User, Request Origin, URL, ROLE and Request Method just adding
-multiple values to the list
-====
-
-== Usage
-
-[NOTE]
-====
-Latest version: image:https://maven-badges.herokuapp.com/maven-central/com.marcosbarbero.cloud/spring-cloud-zuul-ratelimit/badge.svg["Maven Central", link="https://maven-badges.herokuapp.com/maven-central/com.marcosbarbero.cloud/spring-cloud-zuul-ratelimit"]
+也可以组合登录用户、IP地址、URL、登录角色、请求方法等限流方式来一起使用
 ====
 
-[NOTE]
-====
-If you are using Spring Boot version `1.5.x` you *MUST* use Spring Cloud Zuul RateLimit version `1.7.x`.
-Please take a look at the 
-link:https://mvnrepository.com/artifact/com.marcosbarbero.cloud/spring-cloud-zuul-ratelimit[Maven Central] and pick the 
-latest artifact in this version line.
-====
-
-Add the dependency on pom.xml
+== 怎么使用
+在pom.xml增加以下依赖
 
 [source, xml]
 ----
@@ -56,8 +37,7 @@ Add the dependency on pom.xml
 </dependency>
 ----
 
-Add the following dependency accordingly to the chosen data storage: 
-
+在限流中可以使用以下的存储方案
 
 * Redis
 
@@ -149,30 +129,30 @@ Add the following dependency accordingly to the chosen data storage:
 </dependency>
 ----
 
-Sample YAML configuration
+限流的一个简单配置例子
 [source, yaml]
 ----
 zuul:
   ratelimit:
     key-prefix: your-prefix 
-    enabled: true 
-    repository: REDIS
-    behind-proxy: true
-    add-response-headers: true
-    default-policy-list: #optional - will apply unless specific policy exists
-      - limit: 10 #optional - request number limit per refresh interval window
-        quota: 1000 #optional - request time limit per refresh interval window (in seconds)
-        refresh-interval: 60 #default value (in seconds)
-        type: #optional
+    enabled: true   #是否开启限流开关
+    repository: REDIS   #限流数据的存储方式，REDIS。  默认是内存
+    behind-proxy: true  #是否开启代理
+    add-response-headers: true  #在返回头部是否增加限流信息
+    default-policy-list: #全局的默认限流策略。如果在自定义限流未找到合适的，就会使用默认的限流方案
+      - limit: 10 #optional - 每个单位时间窗口内的最大请求数
+        quota: 1000 #optional - 单位时间窗口内所有请求耗时的最大限制，单位秒
+        refresh-interval: 60 #每个单位时间窗口，默认1秒。这里设置60秒即1分钟
+        type: #限流方式。 按登录人、按请求的IP地址、按url、按请求的方法
           - user
           - origin
           - url
           - http_method
-    policy-list:
-      myServiceId:
-        - limit: 10 #optional - request number limit per refresh interval window
-          quota: 1000 #optional - request time limit per refresh interval window (in seconds)
-          refresh-interval: 60 #default value (in seconds)
+    policy-list:    #自定义限流策略
+      myServiceId:  #注册中心服务的serviceId值
+        - limit: 10
+          quota: 1000
+          refresh-interval:
           type: #optional
             - user
             - origin
@@ -187,7 +167,7 @@ zuul:
             - url_pattern=/api/*/payment
 ----
 
-Sample Properties configuration
+简单例子配置
 [source, properties]
 ----
 zuul.ratelimit.enabled=true
@@ -222,13 +202,13 @@ zuul.ratelimit.policy-list.myServiceId[1].type[3]=role=user
 zuul.ratelimit.policy-list.myServiceId[1].type[4]=http_method=get
 ----
 
-== Available implementations
+== 限流实现方式
 
-There are eight implementations provided:
+提供了8种方案:
 
 [cols=2*, options="header"]
 |===
-|Implementation        | Data Storage
+|实现        | 数据存储
 
 |ConsulRateLimiter     | https://www.consul.io/[Consul]
 
@@ -248,19 +228,19 @@ There are eight implementations provided:
 
 |===
 
-Bucket4j implementations require the relevant bean with `@Qualifier("RateLimit")`:
+Bucket4j实现需要在项目配置 `@Qualifier("RateLimit")`Bean实例:
 
  * `JCache` - javax.cache.Cache
  * `Hazelcast` - com.hazelcast.core.IMap
  * `Ignite` - org.apache.ignite.IgniteCache
  * `Infinispan` - org.infinispan.functional.ReadWriteMap
  
-== Common application properties
+== 通用的限流属性
 
 Property namespace: __zuul.ratelimit__
 
 |===
-|Property name| Values |Default Value
+|属性名称| 属性值 |默认值
 
 |enabled             |true/false                   |false
 |behind-proxy        |true/false                   |false
@@ -274,22 +254,22 @@ Property namespace: __zuul.ratelimit__
 
 |===
 
-Policy properties:
+限流策略属性:
 
 |===
-|Property name| Values |Default Value
+|属性名称| 属性值 |默认值
 
-|limit           |number of calls      |  -
-|quota           |time of calls        |  -
-|refresh-interval|seconds              | 60
+|limit           |调用的次数      |  -
+|quota           |调用所耗的时间        |  -
+|refresh-interval|单位时间窗口的刷新时间              | 60秒
 |type            | [ORIGIN, USER, URL, URL_PATTERN, ROLE, HTTP_METHOD] | []
 |breakOnMatch    |true/false           |false
 
 |===
 
-== Further Customization
+== 可以做进一步定制的实现
 
-This section details how to add custom implementations 
+这部分详细告诉您怎么增加自定义实现类
 
 === Key Generator
 
