@@ -70,6 +70,13 @@ import javax.cache.Cache;
 import static com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.properties.RateLimitProperties.PREFIX;
 
 /**
+ * RateLimit的自动配置初始化
+ * <p>
+ * <p>
+ * 1、注意EnableConfigurationProperties与ConfigurationProperties的区别
+ * <p>
+ * 2、如果属性配置了zuul.ratelimit.enabled=true，就开启自动化配置
+ *
  * @author Marcos Barbero
  * @author Liel Chayoun
  */
@@ -78,20 +85,43 @@ import static com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.proper
 @ConditionalOnProperty(prefix = PREFIX, name = "enabled", havingValue = "true")
 public class RateLimitAutoConfiguration {
 
+    /**
+     * Spring 的工具类
+     */
     private static final UrlPathHelper URL_PATH_HELPER = new UrlPathHelper();
 
+    /**
+     * 字符串转MatchType处理类
+     *
+     * @return
+     */
     @Bean
     @ConfigurationPropertiesBinding
     public StringToMatchTypeConverter stringToMatchTypeConverter() {
         return new StringToMatchTypeConverter();
     }
 
+    /**
+     * 初始化默认的限流错误处理器
+     *
+     * @return
+     */
     @Bean
     @ConditionalOnMissingBean(RateLimiterErrorHandler.class)
     public RateLimiterErrorHandler rateLimiterErrorHandler() {
         return new DefaultRateLimiterErrorHandler();
     }
 
+    /**
+     * 初始化限流执行前过滤器
+     *
+     * @param rateLimiter
+     * @param rateLimitProperties
+     * @param routeLocator
+     * @param rateLimitKeyGenerator
+     * @param rateLimitUtils
+     * @return
+     */
     @Bean
     public ZuulFilter rateLimiterPreFilter(final RateLimiter rateLimiter, final RateLimitProperties rateLimitProperties,
                                            final RouteLocator routeLocator, final RateLimitKeyGenerator rateLimitKeyGenerator,
@@ -100,6 +130,16 @@ public class RateLimitAutoConfiguration {
                 rateLimitKeyGenerator, rateLimitUtils);
     }
 
+    /**
+     * 初始化限流执行后的过滤器
+     *
+     * @param rateLimiter
+     * @param rateLimitProperties
+     * @param routeLocator
+     * @param rateLimitKeyGenerator
+     * @param rateLimitUtils
+     * @return
+     */
     @Bean
     public ZuulFilter rateLimiterPostFilter(final RateLimiter rateLimiter, final RateLimitProperties rateLimitProperties,
                                             final RouteLocator routeLocator, final RateLimitKeyGenerator rateLimitKeyGenerator,
@@ -108,6 +148,13 @@ public class RateLimitAutoConfiguration {
                 rateLimitKeyGenerator, rateLimitUtils);
     }
 
+    /**
+     * 实例化RateLimitKeyGenerator，如果用户没有自定义RateLimitKeyGenerator实力，则实例化默认实现
+     *
+     * @param properties
+     * @param rateLimitUtils
+     * @return
+     */
     @Bean
     @ConditionalOnMissingBean(RateLimitKeyGenerator.class)
     public RateLimitKeyGenerator ratelimitKeyGenerator(final RateLimitProperties properties,

@@ -32,6 +32,10 @@ import java.time.Duration;
 import java.util.function.Supplier;
 
 /**
+ *
+ * 使用令牌桶
+ *
+ *
  * Bucket4j rate limiter configuration.
  *
  * @author Liel Chayoun

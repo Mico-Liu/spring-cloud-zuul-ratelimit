@@ -64,6 +64,10 @@ public class RateLimitPostFilter extends AbstractRateLimitFilter {
         return super.shouldFilter() && getRequestStartTime() != null;
     }
 
+    /**
+     * 获取请求的开始时间
+     * @return
+     */
     private Long getRequestStartTime() {
         final RequestContext ctx = RequestContext.getCurrentContext();
         final HttpServletRequest request = ctx.getRequest();
@@ -77,6 +81,7 @@ public class RateLimitPostFilter extends AbstractRateLimitFilter {
         Route route = route(request);
 
         policy(route, request).forEach(policy -> {
+            //请求耗时时间，毫秒
             long requestTime = System.currentTimeMillis() - getRequestStartTime();
             String key = rateLimitKeyGenerator.key(request, route, policy);
             rateLimiter.consume(policy, key, requestTime > 0 ? requestTime : 1);

@@ -25,6 +25,8 @@ import java.util.Set;
 public interface RateLimitUtils {
 
     /**
+     * 获取唯一用户
+     * <p>
      * Returns the authenticated user from {@link HttpServletRequest}.
      *
      * @param request The {@link HttpServletRequest}
@@ -33,6 +35,8 @@ public interface RateLimitUtils {
     String getUser(HttpServletRequest request);
 
     /**
+     * 获取远程真实的IP地址
+     * <p>
      * Returns the remote IP address from {@link HttpServletRequest}.
      *
      * @param request The {@link HttpServletRequest}
@@ -41,6 +45,7 @@ public interface RateLimitUtils {
     String getRemoteAddress(HttpServletRequest request);
 
     /**
+     * 获取用户角色
      * Returns the authenticated user's roles.
      *
      * @return The authenticated user's roles or empty

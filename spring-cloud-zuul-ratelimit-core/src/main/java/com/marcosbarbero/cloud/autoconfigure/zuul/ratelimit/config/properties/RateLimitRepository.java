@@ -17,6 +17,8 @@
 package com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.properties;
 
 /**
+ * 限流数据的存储方式
+ *
  * Enum with all the repositories storage supported.
  *
  * @author Marcos Barbero

@@ -40,13 +40,20 @@ public class DefaultRateLimitUtils implements RateLimitUtils {
 
     @Override
     public String getUser(final HttpServletRequest request) {
+        //获取存储起来的用户唯一识别码，为空，就使用默认值
         return request.getRemoteUser() != null ? request.getRemoteUser() : ANONYMOUS_USER;
     }
 
+    /**
+     * 获取远程IP地址，真实地址
+     * @param request The {@link HttpServletRequest}
+     * @return
+     */
     @Override
     public String getRemoteAddress(final HttpServletRequest request) {
         String xForwardedFor = request.getHeader(X_FORWARDED_FOR_HEADER);
         if (properties.isBehindProxy() && xForwardedFor != null) {
+            //多个ip地址，使用逗号隔开
             return xForwardedFor.split(X_FORWARDED_FOR_HEADER_DELIMITER)[0].trim();
         }
         return request.getRemoteAddr();

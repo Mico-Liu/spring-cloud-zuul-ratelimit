@@ -27,11 +27,15 @@ public interface RateLimiter {
     String QUOTA_SUFFIX = "-quota";
 
     /**
+     * Filter调用。消耗调用次数或调用耗时。 配置文件配置了两个重要参数，一个是请求次数，一个是请求耗时时长
+     * <p>
+     * 此处每调用一次总次数就减1，总时长也会递减。 在请求到来时如果已过期会重置Rate，重置总次数和总时长
+     *
      * @param policy      Template for which rates should be created in case there's no rate limit associated with the
-     *                    key
-     * @param key         Unique key that identifies a request
-     * @param requestTime The total time it took to handle the request
-     * @return a view of a user's rate request limit
+     *                    key  用户配置的限流策略
+     * @param key         Unique key that identifies a request  唯一性的请求key
+     * @param requestTime The total time it took to handle the request  处理请求的耗时时间，单位毫秒
+     * @return a view of a user's rate request limit 返回key对应的Rate信息
      */
     Rate consume(Policy policy, String key, Long requestTime);
 }

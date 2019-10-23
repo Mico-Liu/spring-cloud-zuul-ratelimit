@@ -22,18 +22,30 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.core.convert.converter.Converter;
 
 /**
+ * 字符串转成MatchType类型。转换器
+ *
  * @author Liel Chayoun
  */
 public final class StringToMatchTypeConverter implements Converter<String, MatchType> {
 
     private static final String DELIMITER = "=";
 
+    /**
+     * 转换器
+     *
+     * @param type 类型值，不允许为空。 比如ORIGIN、USER、URL、ROLE、HTTP_METHOD、URL_PATTERN。可以小写
+     * @return MatchType类型
+     */
     @Override
     public MatchType convert(@NotNull String type) {
+        //type含有等号
         if (type.contains(DELIMITER)) {
             String[] matchType = type.split(DELIMITER);
+            //type转成大写，并且转成RateLimitType相应的枚举类型
+            //matchType[1]为匹配规则，即匹配上的需要限流
             return new MatchType(RateLimitType.valueOf(matchType[0].toUpperCase()), matchType[1]);
         }
+        //matcher为空，则所有都会有限流
         return new MatchType(RateLimitType.valueOf(type.toUpperCase()), null);
     }
 }

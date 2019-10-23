@@ -71,26 +71,35 @@ public class RateLimitPreFilter extends AbstractRateLimitFilter {
     public Object run() {
         final RequestContext ctx = RequestContext.getCurrentContext();
         final HttpServletResponse response = ctx.getResponse();
+        //获取请求
         final HttpServletRequest request = ctx.getRequest();
+        //根据请求获取Route
         final Route route = route(request);
 
+        //获取配置的规则
         policy(route, request).forEach(policy -> {
             Map<String, String> responseHeaders = Maps.newHashMap();
 
+            //计数的key的生成
             final String key = rateLimitKeyGenerator.key(request, route, policy);
+            //计数
             final Rate rate = rateLimiter.consume(policy, key, null);
             final String httpHeaderKey = key.replaceAll("[^A-Za-z0-9-.]", "_").replaceAll("__", "_");
 
+            //获取配置的单位时间窗口内的请求数限制
             final Long limit = policy.getLimit();
+            //根据rate获取剩余的请求次数
             final Long remaining = rate.getRemaining();
             if (limit != null) {
                 responseHeaders.put(HEADER_LIMIT + httpHeaderKey, String.valueOf(limit));
                 responseHeaders.put(HEADER_REMAINING + httpHeaderKey, String.valueOf(Math.max(remaining, 0)));
             }
 
+            //获取配置的单位时间窗口内的请求时长
             final Long quota = policy.getQuota();
             final Long remainingQuota = rate.getRemainingQuota();
             if (quota != null) {
+                //设置rate limit 请求的开始时间
                 request.setAttribute(REQUEST_START_TIME, System.currentTimeMillis());
                 responseHeaders.put(HEADER_QUOTA + httpHeaderKey, String.valueOf(quota));
                 responseHeaders.put(HEADER_REMAINING_QUOTA + httpHeaderKey,
@@ -105,10 +114,15 @@ public class RateLimitPreFilter extends AbstractRateLimitFilter {
                 }
             }
 
+            /**
+             * 单位时间窗口内的请求次数或者一段时间内的请求时长超过设定值就给429
+             */
             if ((limit != null && remaining < 0) || (quota != null && remainingQuota < 0)) {
+                //http status  statusCode=429
                 ctx.setResponseStatusCode(HttpStatus.TOO_MANY_REQUESTS.value());
                 ctx.put(RATE_LIMIT_EXCEEDED, "true");
                 ctx.setSendZuulResponse(false);
+                //抛出达到限流的异常
                 throw new RateLimitExceededException();
             }
         });

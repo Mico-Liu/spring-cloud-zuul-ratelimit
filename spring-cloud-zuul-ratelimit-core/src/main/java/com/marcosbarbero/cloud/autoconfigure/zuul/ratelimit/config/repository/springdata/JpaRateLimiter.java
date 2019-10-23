@@ -22,6 +22,8 @@ import com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.repository.Ab
 import com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.repository.RateLimiterErrorHandler;
 
 /**
+ * Rate的CRUD操作
+ *
  * JPA {@link RateLimiter} configuration.
  *
  * @author Marcos Barbero
@@ -38,11 +40,21 @@ public class JpaRateLimiter extends AbstractRateLimiter {
         this.repository = repository;
     }
 
+    /**
+     * 根据计算出来的key值获取Rate
+     * @param key
+     * @return
+     */
     @Override
     protected Rate getRate(String key) {
+        //根据主键查询，key为主键。查不到就返回空
         return this.repository.findById(key).orElse(null);
     }
 
+    /**
+     * 更新或创建Rate
+     * @param rate
+     */
     @Override
     protected void saveRate(Rate rate) {
         this.repository.save(rate);

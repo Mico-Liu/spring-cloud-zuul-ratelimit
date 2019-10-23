@@ -39,6 +39,8 @@ import static org.springframework.cloud.netflix.zuul.filters.support.FilterConst
 import static org.springframework.cloud.netflix.zuul.filters.support.FilterConstants.SEND_RESPONSE_FILTER_ORDER;
 
 /**
+ * 限流的配置属性
+ *
  * @author Marcos Barbero
  * @author Liel Chayoun
  */
@@ -47,30 +49,89 @@ import static org.springframework.cloud.netflix.zuul.filters.support.FilterConst
 @ConfigurationProperties(RateLimitProperties.PREFIX)
 public class RateLimitProperties {
 
+    /**
+     *
+
+     zuul:
+     ratelimit:
+     ## Key的前缀
+     key-prefix: your-prefix
+     ## 是否看起限流
+     enabled: true
+     ## 数据存储方式，有那些数据存储方式？
+     repository: REDIS
+     behind-proxy: true
+     add-response-headers: true
+     ## 默认的限流策略
+     default-policy-list:
+     ## 限流的时间范围60秒
+     -refresh-interval: 60
+     ## 限流的时间范围内的请求次数
+     limit: 10
+     ## 限流的时间范围内的请求时间
+     quota: 1000
+     ## 特定的限流策略
+     policy-list:
+     ## Zuul中注册的服务的ServiceId
+     myServiceId:
+     limit: 10
+     quota: 1000
+     refresh-interval: 60
+     ## 限流策略，有那些现流策略？
+     type:
+     - URL
+     *
+     */
+
+
+    /**
+     * 限流配置的前缀
+     */
     public static final String PREFIX = "zuul.ratelimit";
 
+    /**
+     * 全局限流策略，可单独细化到服务粒度
+     */
     @Valid
     @NotNull
     @Policies
     @NestedConfigurationProperty
     private List<Policy> defaultPolicyList = Lists.newArrayList();
 
+    /**
+     * 自定义的限流配置策略。 key为服务的服务名，value 为具体服务的限流策略
+     */
     @Valid
     @NotNull
     @Policies
     @NestedConfigurationProperty
     private Map<String, List<Policy>> policyList = Maps.newHashMap();
 
+    /**
+     * 表示代理之后
+     */
     private boolean behindProxy;
 
+    /**
+     * 限流开关是否开启，默认不开启
+     */
     private boolean enabled;
 
+    /**
+     * 限流的信息是否设置到header，返回给客户端。默认开启
+     */
     private boolean addResponseHeaders = true;
 
+    /**
+     * 按粒度拆分的临时变量key前缀.  如果未设置spring.application.name。就使用默认值rate-limit-application
+     */
     @NotNull
     @Value("${spring.application.name:rate-limit-application}")
     private String keyPrefix;
 
+    /**
+     * 限流持久化枚举类型。key存储类型，默认是IN_MEMORY本地内存
+     */
     @NotNull
     private RateLimitRepository repository;
 
@@ -78,22 +139,44 @@ public class RateLimitProperties {
 
     private int preFilterOrder = FORM_BODY_WRAPPER_FILTER_ORDER;
 
+    /**
+     * 根据key获取限流策略列表，获取不到就使用默认配置策略
+     *
+     * @param key
+     * @return
+     */
     public List<Policy> getPolicies(String key) {
         return policyList.getOrDefault(key, defaultPolicyList);
     }
 
+    /**
+     * 返回默认配置策略
+     *
+     * @return
+     */
     public List<Policy> getDefaultPolicyList() {
         return defaultPolicyList;
     }
 
+    //设置默认的配置策略
     public void setDefaultPolicyList(List<Policy> defaultPolicyList) {
         this.defaultPolicyList = defaultPolicyList;
     }
 
+    /**
+     * 获取所有配置策略
+     *
+     * @return
+     */
     public Map<String, List<Policy>> getPolicyList() {
         return policyList;
     }
 
+    /**
+     * 设置所有的配置策略
+     *
+     * @param policyList
+     */
     public void setPolicyList(Map<String, List<Policy>> policyList) {
         this.policyList = policyList;
     }
@@ -156,11 +239,20 @@ public class RateLimitProperties {
 
     public static class Policy {
 
+        /**
+         * 单位时间窗口。默认是1秒
+         */
         @NotNull
         private Long refreshInterval = MINUTES.toSeconds(1L);
 
+        /**
+         * 一个单位时间窗口的请求数量
+         */
         private Long limit;
 
+        /**
+         * 一个单位时间窗口的请求时间限制
+         */
         private Long quota;
 
         @NotNull
@@ -211,12 +303,21 @@ public class RateLimitProperties {
             this.type = type;
         }
 
+        /**
+         * 内部类
+         */
         public static class MatchType {
 
+            /**
+             * 限流类型
+             */
             @Valid
             @NotNull
             private RateLimitType type;
 
+            /**
+             * 匹配值。根据匹配规则，匹配上才会限流
+             */
             private String matcher;
 
             public MatchType(@Valid @NotNull RateLimitType type, String matcher) {

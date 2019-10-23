@@ -5,6 +5,8 @@ import org.springframework.cloud.netflix.zuul.util.ZuulRuntimeException;
 import org.springframework.http.HttpStatus;
 
 /**
+ * 达到限流条件时，抛出此异常
+ *
  * @author Liel Chayoun
  */
 public class RateLimitExceededException extends ZuulRuntimeException {

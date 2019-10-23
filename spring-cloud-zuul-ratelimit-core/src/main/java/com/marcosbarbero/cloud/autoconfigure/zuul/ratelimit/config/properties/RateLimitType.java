@@ -28,14 +28,18 @@ import java.util.Optional;
 public enum RateLimitType {
     /**
      * Rate limit policy considering the user's origin.
+     * <p>
+     * 针对请用户的IP地址限流
      */
     ORIGIN {
         @Override
         public boolean apply(HttpServletRequest request, Route route, RateLimitUtils rateLimitUtils, String matcher) {
             if (matcher.contains("/")) {
+                //判断matcher是否在网段内
                 SubnetUtils subnetUtils = new SubnetUtils(matcher);
                 return subnetUtils.getInfo().isInRange(rateLimitUtils.getRemoteAddress(request));
             }
+            //判断matcher是否等于 RateLimitUtils.getRemoteAddress(request)
             return matcher.equals(rateLimitUtils.getRemoteAddress(request));
         }
 
@@ -46,6 +50,8 @@ public enum RateLimitType {
     },
 
     /**
+     * 针对请求的用户认证进行限流
+     * <p>
      * Rate limit policy considering the authenticated user.
      */
     USER {
@@ -61,6 +67,8 @@ public enum RateLimitType {
     },
 
     /**
+     * 使用请求的路径限流
+     *
      * Rate limit policy considering the request path to the downstream service.
      */
     URL {

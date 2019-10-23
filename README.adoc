@@ -271,11 +271,8 @@ Property namespace: __zuul.ratelimit__
 
 这部分详细告诉您怎么增加自定义实现类
 
-=== Key Generator
-
-If the application needs to control the key strategy beyond the options offered by the type property then it can 
-be done just by creating a custom link:./spring-cloud-zuul-ratelimit-core/src/main/java/com/marcosbarbero/cloud/autoconfigure/zuul/ratelimit/config/RateLimitKeyGenerator.java[`RateLimitKeyGenerator`]
-implementation adding further qualifiers or something entirely different:
+=== Key生成策略
+如果现在提供的key生成策略不满足你，你可以自己创建自定义的key生成策略，来满足更适合您自己的内容
 
 [source, java]
 ----
@@ -290,15 +287,8 @@ implementation adding further qualifiers or something entirely different:
   }
 ----
 
-=== Error Handling
-This framework uses 3rd party applications to control the rate limit access and these libraries are out of control of this framework.
-If one of the 3rd party applications fails, the framework will handle this failure in the
-link:./spring-cloud-zuul-ratelimit-core/src/main/java/com/marcosbarbero/cloud/autoconfigure/zuul/ratelimit/config/repository/DefaultRateLimiterErrorHandler.java[`DefaultRateLimiterErrorHandler`] class
-which will log the error upon failure.
-
-If there is a need to handle the errors differently, it can be achieved by defining a custom
-link:./spring-cloud-zuul-ratelimit-core/src/main/java/com/marcosbarbero/cloud/autoconfigure/zuul/ratelimit/config/repository/RateLimiterErrorHandler.java[`RateLimiterErrorHandler`]
-beanfootnote:[By declaring a new `RateLimitErrorHandler`, you replace the `DefaultRateLimitErrorHandler`.], e.g:
+=== 错误处理器
+框架使用默认的错误处理器，在控制台输出错误日志，如果你不想在控制台输出，可以自定义错误处理器，比如直接返回统一的json错误信息
 
 [source, java]
 ----
@@ -322,21 +312,3 @@ beanfootnote:[By declaring a new `RateLimitErrorHandler`, you replace the `Defau
     }
   }
 ----
-
-== Contributing
-Spring Cloud Zuul Rate Limit is released under the non-restrictive Apache 2.0 license, and follows a very 
-standard Github development process, using Github tracker for issues and merging pull requests into master. 
-If you want to contribute even something trivial please do not hesitate, but follow the guidelines below.
-
-=== Code of Conduct
-This project adheres to the Contributor Covenant 
-https://github.com/marcosbarbero/spring-cloud-starter-zuul-ratelimit/blob/master/docs/code-of-conduct.adoc[code of conduct].
-By participating, you are expected to uphold this code. Please report unacceptable behavior to marcos.hgb@gmail.com.
-
-=== Acknowledgement
-
-image::jetbrains_logo.png[Jetbrains, 150, link="https://www.jetbrains.com/"]
-
-== Footnote
-Any doubt open an https://github.com/marcosbarbero/spring-cloud-starter-zuul-ratelimit/issues[issue].
-Any fix send me a https://github.com/marcosbarbero/spring-cloud-starter-zuul-ratelimit/pulls[Pull Request].

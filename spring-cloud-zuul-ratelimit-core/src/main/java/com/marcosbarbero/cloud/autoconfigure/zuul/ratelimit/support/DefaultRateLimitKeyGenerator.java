@@ -43,8 +43,16 @@ public class DefaultRateLimitKeyGenerator implements RateLimitKeyGenerator {
         this.rateLimitUtils = rateLimitUtils;
     }
 
+    /**
+     * 限流的key生成规则
+     * @param request The {@link HttpServletRequest}
+     * @param route   The {@link Route}
+     * @param policy  The {@link RateLimitProperties.Policy}
+     * @return
+     */
     @Override
     public String key(final HttpServletRequest request, final Route route, final Policy policy) {
+        //字符串拼接，使用冒号隔开
         final StringJoiner joiner = new StringJoiner(":");
         joiner.add(properties.getKeyPrefix());
         if (route != null) {

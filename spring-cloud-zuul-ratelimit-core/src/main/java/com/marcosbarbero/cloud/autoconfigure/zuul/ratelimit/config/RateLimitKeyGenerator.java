@@ -25,6 +25,8 @@ import javax.servlet.http.HttpServletRequest;
 /**
  * Key generator for rate limit control.
  *
+ * 限流的key生成方式
+ *
  * @author Liel Chayoun
  */
 public interface RateLimitKeyGenerator {
