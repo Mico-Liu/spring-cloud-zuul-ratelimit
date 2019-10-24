@@ -108,6 +108,7 @@
             <version>${bucket4j.version}</version>
         </dependency>
 
+        <!-- 编译期间使用，如果要使用，需要增加依赖 -->
         <dependency>
             <groupId>javax.cache</groupId>
             <artifactId>cache-api</artifactId>
