@@ -10,13 +10,13 @@
  ** 使用用户的IP请求地址来限流
  * URL
  ** 使用用户的请求path来限流
- * URL Pattern
+ * URL匹配
  ** 使用用户的请求path的匹配模式来限流
- * ROLE
+ * 登录用户角色
  ** 使用登录用户的不同角色来限流
- * Request method
+ * 针对请求方法
  ** 使用用户请求的方法来限流，如POST|GET|DELETE
- * Global configuration per service:
+ * 针对服务:
  ** 这种方式不会校验IP地址、登录用户、还有URI等、
  ** 使用这个方式，不可以在配置中使用type
 
