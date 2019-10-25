@@ -240,7 +240,7 @@ public class RateLimitProperties {
     public static class Policy {
 
         /**
-         * 单位时间窗口。默认是1秒
+         * 单位时间窗口。默认是60秒
          */
         @NotNull
         private Long refreshInterval = MINUTES.toSeconds(1L);

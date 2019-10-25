@@ -102,7 +102,7 @@ public class RateLimitAutoConfiguration {
     }
 
     /**
-     * 初始化默认的限流错误处理器
+     * 实例化错误处理器，没有找到自定义的RateLimiterErrorHandlerBean，就使用默认的处理器
      *
      * @return
      */
@@ -179,17 +179,36 @@ public class RateLimitAutoConfiguration {
         }
     }
 
+    /**
+     * 1、在类路径下存在RedisTemplate类
+     * 2、在上下文找不到RateLimiter对象
+     * 3、zuul.ratelimit.repository配置REDIS
+     * 满足以上所有条件时，才会初始化此配置
+     */
     @Configuration
     @ConditionalOnClass(RedisTemplate.class)
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnProperty(prefix = PREFIX, name = "repository", havingValue = "REDIS")
     public static class RedisConfiguration {
 
+        /**
+         * 实例化StringRedisTemplate对象，并且bean的名称是rateLimiterRedisTemplate
+         *
+         * @param connectionFactory
+         * @return
+         */
         @Bean("rateLimiterRedisTemplate")
         public StringRedisTemplate redisTemplate(final RedisConnectionFactory connectionFactory) {
             return new StringRedisTemplate(connectionFactory);
         }
 
+        /**
+         * 实例化RateLimiter对象，使用RedisRateLimiter的实现类创建
+         *
+         * @param rateLimiterErrorHandler rateLimiterErrorHandler对象
+         * @param redisTemplate           ateLimiterRedisTemplate对象
+         * @return 返回RateLimiter对象
+         */
         @Bean
         public RateLimiter redisRateLimiter(final RateLimiterErrorHandler rateLimiterErrorHandler,
                                             @Qualifier("rateLimiterRedisTemplate") final RedisTemplate redisTemplate) {
@@ -197,12 +216,26 @@ public class RateLimitAutoConfiguration {
         }
     }
 
+    /**
+     * 1、开启consul功能，即ConditionalOnConsulEnabled注解
+     * 2、在上下文找不到RateLimiter对象
+     * 3、zuul.ratelimit.repository配置CONSUL
+     * 满足以上所有条件时，才会初始化此配置
+     */
     @Configuration
     @ConditionalOnConsulEnabled
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnProperty(prefix = PREFIX, name = "repository", havingValue = "CONSUL")
     public static class ConsulConfiguration {
 
+        /**
+         * 例化RateLimiter对象，使用ConsulRateLimiter的实现类创建
+         *
+         * @param rateLimiterErrorHandler rateLimiterErrorHandler对象
+         * @param consulClient
+         * @param objectMapper
+         * @return 返回RateLimiter对象
+         */
         @Bean
         public RateLimiter consultRateLimiter(final RateLimiterErrorHandler rateLimiterErrorHandler,
                                               final ConsulClient consulClient, final ObjectMapper objectMapper) {
@@ -211,30 +244,64 @@ public class RateLimitAutoConfiguration {
 
     }
 
+    /**
+     * 1、开类路径下游JCache和Cache类。JCache是bucket4j的基础类。Cache是jdk自带的cache-api类
+     * 2、在上下文找不到RateLimiter对象
+     * 3、zuul.ratelimit.repository配置BUCKET4J_JCACHE
+     * 满足以上所有条件时，才会初始化此配置
+     */
     @Configuration
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnClass({JCache.class, Cache.class})
     @ConditionalOnProperty(prefix = PREFIX, name = "repository", havingValue = "BUCKET4J_JCACHE")
     public static class Bucket4jJCacheConfiguration {
 
+        /**
+         * 例化RateLimiter对象，使用Bucket4jJCacheRateLimiter的实现类创建
+         *
+         * @param cache
+         * @return
+         */
         @Bean
         public RateLimiter jCache4jHazelcastRateLimiter(@Qualifier("RateLimit") final Cache<String, GridBucketState> cache) {
             return new Bucket4jJCacheRateLimiter(cache);
         }
     }
 
+    /**
+     * 1、在类路径下能找到Hazelcast和IMap类。Hazelcast是bucket4j-hazelcast的基础类。IMap是hazelcast-core自带中的类
+     * 2、在上下文找不到RateLimiter对象
+     * 3、zuul.ratelimit.repository配置BUCKET4J_HAZELCAST
+     * 满足以上所有条件时，才会初始化此配置
+     *
+     * Hazelcast是内存数据平台，并提供了分布式计算。有嵌入部署和独立部署两种方式
+     */
     @Configuration
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnClass({Hazelcast.class, IMap.class})
     @ConditionalOnProperty(prefix = PREFIX, name = "repository", havingValue = "BUCKET4J_HAZELCAST")
     public static class Bucket4jHazelcastConfiguration {
 
+        /**
+         * 化RateLimiter对象，使用Bucket4jHazelcastRateLimiter的实现类创建
+         *
+         * @param rateLimit
+         * @return
+         */
         @Bean
         public RateLimiter bucket4jHazelcastRateLimiter(@Qualifier("RateLimit") final IMap<String, GridBucketState> rateLimit) {
             return new Bucket4jHazelcastRateLimiter(rateLimit);
         }
     }
 
+    /**
+     * 1、在类路径下能找到Ignite和IgniteCache类。Ignite是bucket4j-ignite的基础类。IgniteCache是ignite-core自带中的类
+     * 2、在上下文找不到RateLimiter对象
+     * 3、zuul.ratelimit.repository配置BUCKET4J_HAZELCAST
+     * 满足以上所有条件时，才会初始化此配置
+     * <p>
+     * Ignite是一个内存为中心的数据平台。嵌入部署
+     */
     @Configuration
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnClass({Ignite.class, IgniteCache.class})
@@ -247,6 +314,14 @@ public class RateLimitAutoConfiguration {
         }
     }
 
+    /**
+     * 1、在类路径下能找到Infinispan和ReadWriteMap类。Infinispan是bucket4j-infinispan的基础类。ReadWriteMap是nfinispan-core自带中的类
+     * 2、在上下文找不到RateLimiter对象
+     * 3、zuul.ratelimit.repository配置BUCKET4J_INFINISPAN
+     * 满足以上所有条件时，才会初始化此配置
+     * <p>
+     * Ignite是一个分布式键值服务，提供嵌入部署和独立部署两种方式
+     */
     @Configuration
     @ConditionalOnMissingBean(RateLimiter.class)
     @ConditionalOnClass({Infinispan.class, ReadWriteMap.class})
@@ -259,6 +334,14 @@ public class RateLimitAutoConfiguration {
         }
     }
 
+    /**
+     * 1、开启entity扫描
+     * 2、在上下文找不到RateLimiter对象
+     * 3、zuul.ratelimit.repository配置JPA
+     * 4、扫描com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.repository.springdata包下的所有JapanRepository
+     * 满足以上所有条件时，才会初始化此配置
+     *
+     */
     @EntityScan
     @Configuration
     @EnableJpaRepositories(basePackages = "com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.repository.springdata")

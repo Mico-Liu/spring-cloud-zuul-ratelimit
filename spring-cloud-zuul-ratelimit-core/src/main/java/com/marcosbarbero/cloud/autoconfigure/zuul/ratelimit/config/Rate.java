@@ -39,7 +39,7 @@ public class Rate {
     private String key;
     private Long remaining;
     private Long remainingQuota;
-    private Long reset;
+    private Long  reset;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy HH:mm:ss")
     private Date expiration;
 
