@@ -20,23 +20,6 @@
  ** 这种方式不会校验IP地址、登录用户、还有URI等、
  ** 使用这个方式，不可以在配置中使用type
 
-[注意]
-====
-也可以组合登录用户、IP地址、URL、登录角色、请求方法等限流方式来一起使用
-====
-
-== 怎么使用
-在pom.xml增加以下依赖
-
-[source, xml]
-----
-<dependency>
-    <groupId>com.marcosbarbero.cloud</groupId>
-    <artifactId>spring-cloud-zuul-ratelimit</artifactId>
-    <version>LATEST</version>
-</dependency>
-----
-
 在限流中可以使用以下的存储方案
 
 * Redis
@@ -167,41 +150,6 @@ zuul:
             - url_pattern=/api/*/payment
 ----
 
-简单例子配置
-[source, properties]
-----
-zuul.ratelimit.enabled=true
-zuul.ratelimit.key-prefix=your-prefix
-zuul.ratelimit.repository=REDIS
-zuul.ratelimit.behind-proxy=true
-zuul.ratelimit.add-response-headers=true
-
-zuul.ratelimit.default-policy-list[0].limit=10
-zuul.ratelimit.default-policy-list[0].quota=1000
-zuul.ratelimit.default-policy-list[0].refresh-interval=60
-
-# Adding multiple rate limit type
-zuul.ratelimit.default-policy-list[0].type[0]=user
-zuul.ratelimit.default-policy-list[0].type[1]=origin
-zuul.ratelimit.default-policy-list[0].type[2]=url
-zuul.ratelimit.default-policy-list[0].type[3]=http_method
-
-# Adding the first rate limit policy to "myServiceId"
-zuul.ratelimit.policy-list.myServiceId[0].limit=10
-zuul.ratelimit.policy-list.myServiceId[0].quota=1000
-zuul.ratelimit.policy-list.myServiceId[0].refresh-interval=60
-zuul.ratelimit.policy-list.myServiceId[0].type[0]=user
-zuul.ratelimit.policy-list.myServiceId[0].type[1]=origin
-zuul.ratelimit.policy-list.myServiceId[0].type[2]=url
-
-# Adding the second rate limit policy to "myServiceId"
-zuul.ratelimit.policy-list.myServiceId[1].type[0]=user=anonymous
-zuul.ratelimit.policy-list.myServiceId[1].type[1]=origin=somemachine.com
-zuul.ratelimit.policy-list.myServiceId[1].type[2]=url_pattern=/api/*/payment
-zuul.ratelimit.policy-list.myServiceId[1].type[3]=role=user
-zuul.ratelimit.policy-list.myServiceId[1].type[4]=http_method=get
-----
-
 == 限流实现方式
 
 提供了8种方案:
@@ -312,3 +260,47 @@ Property namespace: __zuul.ratelimit__
     }
   }
 ----
+
+== 限流算法
+=== 计数器算法：基于信号量Semaphore
+- 只有数量维度，没有时间维度
+
+=== 计数器算法：基于fixed window。 固定时间窗口
+- 带上了时间维度，不过在两个窗口的临界点容易出现超出限流的情况
+比如限制每分钟10个请求，在00:59请求了10次，在01:01又请求了10次，而从00:30-01:30这个时间窗口来看，
+这一分钟请求了20次，没有控制好
+
+=== 基于rolling window
+- 解决fixed window没解决的窗口临界问题，主要有基于token bucket的算法，以及基于leaky bucket的算法
+
+==== token bucket令牌桶算法
+一个存放固定容量令牌的桶，按照固定速率往桶里添加令牌。
+
+- 令牌将按照固定的速率被放入令牌桶中。比如每秒放10个。
+- 桶中最多存放b个令牌，当桶满时，新添加的令牌被丢弃或拒绝。
+- 当一个n个字节大小的数据包到达，将从桶中删除n个令牌，接着数据包被发送到网络上。
+- 如果桶中的令牌不足n个，则不会删除令牌，且该数据包将被限流（要么丢弃，要么缓冲区等待）。
+
+- 例子：
+假如我们现在是国庆放假，故宫要做限流措施，对故宫的游客数量进行控制。因此工作人员准备半个小时，派出100张票，
+也就是每半个小时生成100张票。假如游人很多，那么每次100张票都能在半小时内用完，其他游客没票了，只能在外面等着，
+不让进。那假如游人很少，半个小时100张没用完，那么就会累积在那儿，半个小时后又新生成100张。
+因此售票处的票会越来越累积起来。假如突然来了一个大型旅行团，游客数量很多，那么此时由于前面还累积了很多票，
+因此即使这个旅行团超过100，也能使他们每个人都有票。
+
+- 能够限制数据的平均传输速率外，还允许某种程度的突发传输
+
+==== leaky bucket漏桶算法
+- 一个固定容量的漏桶，按照常量固定速率流出水滴；
+- 如果桶是空的，则不需流出水滴；
+- 可以以任意速率流入水滴到漏桶
+- 如果流入水滴超出了桶的容量，则流入的水滴溢出了（被丢弃），而漏桶容量是不变的。
+- 能够强行限制数据的传输速率
+
+
+
+
+
+
+
+

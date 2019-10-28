@@ -16,26 +16,20 @@
 
 package com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.repository.bucket4j;
 
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
-
 import com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.Rate;
 import com.marcosbarbero.cloud.autoconfigure.zuul.ratelimit.config.repository.AbstractCacheRateLimiter;
-import io.github.bucket4j.AbstractBucketBuilder;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
-import io.github.bucket4j.BucketConfiguration;
-import io.github.bucket4j.ConsumptionProbe;
-import io.github.bucket4j.Extension;
+import io.github.bucket4j.*;
 import io.github.bucket4j.grid.ProxyManager;
+
 import java.time.Duration;
 import java.util.function.Supplier;
 
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+
 /**
- *
- * 使用令牌桶
- *
- *
+ * 使用令牌桶算法
+ * <p>
+ * <p>
  * Bucket4j rate limiter configuration.
  *
  * @author Liel Chayoun
@@ -51,6 +45,7 @@ abstract class AbstractBucket4jRateLimiter<T extends AbstractBucketBuilder<T>, E
     }
 
     void init() {
+
         buckets = getProxyManager(getExtension());
     }
 
@@ -60,20 +55,48 @@ abstract class AbstractBucket4jRateLimiter<T extends AbstractBucketBuilder<T>, E
 
     protected abstract ProxyManager<String> getProxyManager(E extension);
 
+    /**
+     * 获取时间的令牌桶
+     *
+     * @param key             限流的key值
+     * @param quota
+     * @param refreshInterval 单位时间窗口，单位秒
+     * @return
+     */
     private Bucket getQuotaBucket(String key, Long quota, Long refreshInterval) {
         return buckets.getProxy(key + QUOTA_SUFFIX, getBucketConfiguration(quota, refreshInterval));
     }
 
+    /**
+     * 获取大次数的令牌桶
+     *
+     * @param key
+     * @param limit           单位时间窗口范围的最大次数
+     * @param refreshInterval 单位时间窗口，单位秒
+     * @return
+     */
     private Bucket getLimitBucket(String key, Long limit, Long refreshInterval) {
         return buckets.getProxy(key, getBucketConfiguration(limit, refreshInterval));
     }
 
+    /**
+     * @param capacity 令牌桶里的容量大小
+     * @param period   单位时间窗口，单位秒
+     * @return
+     */
     private Supplier<BucketConfiguration> getBucketConfiguration(Long capacity, Long period) {
         return () -> Bucket4j.configurationBuilder()
                 .addLimit(Bandwidth.simple(capacity, Duration.ofSeconds(period)))
                 .build();
     }
 
+    /**
+     * 设置剩余值
+     *
+     * @param rate      限流信息
+     * @param remaining 剩余值
+     * @param isQuota   isQuota=true时remaining剩余值为剩余时间，isQuota=true时remaining剩余值时为剩余次数
+     */
     private void setRemaining(Rate rate, long remaining, boolean isQuota) {
         if (isQuota) {
             rate.setRemainingQuota(remaining);
@@ -82,15 +105,36 @@ abstract class AbstractBucket4jRateLimiter<T extends AbstractBucketBuilder<T>, E
         }
     }
 
+    /**
+     * // 毫秒
+     * Bucket4j.builder().withMillisecondPrecision().build;
+     * // 微秒
+     * Bucket4j.builder().withNanosecondPrecision().build()
+     * <p>
+     * 计算并且设置剩余的令牌
+     *
+     * @param consume 消费次数
+     * @param rate    限流的信息
+     * @param bucket
+     * @param isQuota
+     */
     private void calcAndSetRemainingBucket(Long consume, Rate rate, Bucket bucket, boolean isQuota) {
+        //尝试消费consume个令牌
         ConsumptionProbe consumptionProbe = bucket.tryConsumeAndReturnRemaining(consume);
         long nanosToWaitForRefill = consumptionProbe.getNanosToWaitForRefill();
         rate.setReset(NANOSECONDS.toMillis(nanosToWaitForRefill));
+        //判断是否能消耗
         if (consumptionProbe.isConsumed()) {
+            //剩余次数
             long remainingTokens = consumptionProbe.getRemainingTokens();
+            //更新rate中的剩余次数或剩余时间
             setRemaining(rate, remainingTokens, isQuota);
-        } else {
+        }
+        //没有令牌
+        else {
+            //更新rate中的剩余次数或剩余时间。 设置为-1，用完了
             setRemaining(rate, -1L, isQuota);
+            //告知令牌桶，要增加令牌了
             bucket.tryConsumeAsMuchAsPossible(consume);
         }
     }
@@ -101,6 +145,15 @@ abstract class AbstractBucket4jRateLimiter<T extends AbstractBucketBuilder<T>, E
         setRemaining(rate, remaining, isQuota);
     }
 
+    /**
+     * 计算次数令牌桶的剩余次数值
+     *
+     * @param limit           单位时间窗口内的总次数
+     * @param refreshInterval 单位时间窗口
+     * @param requestTime     单位时间窗口内的总耗时
+     * @param key             限流的key
+     * @param rate            限流key对应的信息
+     */
     @Override
     protected void calcRemainingLimit(final Long limit, final Long refreshInterval, final Long requestTime,
                                       final String key, final Rate rate) {
@@ -108,9 +161,12 @@ abstract class AbstractBucket4jRateLimiter<T extends AbstractBucketBuilder<T>, E
             return;
         }
         Bucket bucket = getLimitBucket(key, limit, refreshInterval);
+        //执行preFilter时
         if (requestTime == null) {
             calcAndSetRemainingBucket(1L, rate, bucket, false);
-        } else {
+        }
+        //执行POSTFilter时
+        else {
             calcAndSetRemainingBucket(bucket, rate, false);
         }
     }
